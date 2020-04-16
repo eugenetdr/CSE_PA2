@@ -41,43 +41,7 @@ public class ClientCP1 {
 			toServer = new DataOutputStream(clientSocket.getOutputStream());
 			fromServer = new DataInputStream(clientSocket.getInputStream());
 
-			System.out.println("Sending file...");
-
-			// Send the filename
-			toServer.writeInt(0);
-			toServer.writeInt(filename.getBytes().length);
-			toServer.write(filename.getBytes());
-			//toServer.flush();
-
-			// Open the file
-			fileInputStream = new FileInputStream(filename);
-			bufferedFileInputStream = new BufferedInputStream(fileInputStream);
-
-	        byte [] fromFileBuffer = new byte[117];
-	        
-	        // Set up encryption
-	        PublicKey key = AuthenticationProtocol.getPubKey("../cacse.crt", "../server.crt");
-	        if (key != null) {
-	        	Cipher rsaCipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
-		        rsaCipher.init(Cipher.ENCRYPT_MODE, key);
-
-			    // Send the file
-			    for (boolean fileEnded = false; !fileEnded;) {
-					numBytes = bufferedFileInputStream.read(fromFileBuffer);
-					fileEnded = numBytes < 117;
-					
-					fromFileBuffer = Arrays.copyOfRange(fromFileBuffer, 0, numBytes);
-
-					//Encrypt Line
-			        byte[] encrypted = rsaCipher.doFinal(fromFileBuffer);
-			        int encryptedNumBytes = encrypted.length;
-					
-					toServer.writeInt(1);
-					toServer.writeInt(encryptedNumBytes);
-					toServer.write(encrypted);
-					toServer.flush();
-				}
-	        }
+			sendfile(String filename);
 	        
 
 	        bufferedFileInputStream.close();
@@ -89,5 +53,46 @@ public class ClientCP1 {
 
 		long timeTaken = System.nanoTime() - timeStarted;
 		System.out.println("Program took: " + timeTaken/1000000.0 + "ms to run");
+	}
+
+
+	public static void sendfile(String filename){
+		System.out.println("Sending file...");
+
+		// Send the filename
+		toServer.writeInt(0);
+		toServer.writeInt(filename.getBytes().length);
+		toServer.write(filename.getBytes());
+		toServer.flush();
+
+		// Open the file
+		fileInputStream = new FileInputStream(filename);
+		bufferedFileInputStream = new BufferedInputStream(fileInputStream);
+
+        byte [] fromFileBuffer = new byte[117];
+        
+        // Set up encryption
+        PublicKey key = AuthenticationProtocol.getPubKey("../cacse.crt", "../server.crt");
+        if (key != null) {
+        	Cipher rsaCipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+	        rsaCipher.init(Cipher.ENCRYPT_MODE, key);
+
+		    // Send the file
+		    for (boolean fileEnded = false; !fileEnded;) {
+				numBytes = bufferedFileInputStream.read(fromFileBuffer);
+				fileEnded = numBytes < 117;
+				
+				fromFileBuffer = Arrays.copyOfRange(fromFileBuffer, 0, numBytes);
+
+				//Encrypt Line
+		        byte[] encrypted = rsaCipher.doFinal(fromFileBuffer);
+		        int encryptedNumBytes = encrypted.length;
+				
+				toServer.writeInt(1);
+				toServer.writeInt(encryptedNumBytes);
+				toServer.write(encrypted);
+				toServer.flush();
+			}
+        }
 	}
 }

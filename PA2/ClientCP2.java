@@ -5,13 +5,14 @@ import java.io.FileInputStream;
 import java.net.Socket;
 import java.util.Arrays;
 import java.security.*;
-import javax.crypto.Cipher;
+import javax.crypto.*;
+import java.util.Base64;
 
-public class ClientCP1 {
+public class ClientCP2 {
 
 	public static void main(String[] args) {
 
-    	String filename = "100000.txt";
+    	String filename = "100.txt";
     	if (args.length > 0) filename = args[0];
 
     	String serverAddress = "localhost";
@@ -47,7 +48,29 @@ public class ClientCP1 {
 			toServer.writeInt(0);
 			toServer.writeInt(filename.getBytes().length);
 			toServer.write(filename.getBytes());
-			//toServer.flush();
+			toServer.flush();
+
+			// Generate AES encryption key
+        	KeyGenerator keyGen = KeyGenerator.getInstance("AES");
+        	SecretKey aesKey = keyGen.generateKey();
+
+			// Send Encrypted AES key
+
+			PublicKey key = AuthenticationProtocol.getPubKey("../cacse.crt", "../server.crt");
+
+	        if (key != null) {
+
+	        	Cipher rsaCipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+		        rsaCipher.init(Cipher.ENCRYPT_MODE, key);
+
+		        byte[] encryptedKey = rsaCipher.doFinal(aesKey.getEncoded());
+
+		        toServer.writeInt(2);
+				toServer.writeInt(encryptedKey.length);
+				toServer.write(encryptedKey);
+				toServer.flush();
+
+		    }
 
 			// Open the file
 			fileInputStream = new FileInputStream(filename);
@@ -56,10 +79,10 @@ public class ClientCP1 {
 	        byte [] fromFileBuffer = new byte[117];
 	        
 	        // Set up encryption
-	        PublicKey key = AuthenticationProtocol.getPubKey("../cacse.crt", "../server.crt");
+	        // PublicKey key = AuthenticationProtocol.getPubKey("../cacse.crt", "../server.crt");
 	        if (key != null) {
-	        	Cipher rsaCipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
-		        rsaCipher.init(Cipher.ENCRYPT_MODE, key);
+	        	Cipher aesCipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
+        		aesCipher.init(Cipher.ENCRYPT_MODE, aesKey);
 
 			    // Send the file
 			    for (boolean fileEnded = false; !fileEnded;) {
@@ -69,7 +92,7 @@ public class ClientCP1 {
 					fromFileBuffer = Arrays.copyOfRange(fromFileBuffer, 0, numBytes);
 
 					//Encrypt Line
-			        byte[] encrypted = rsaCipher.doFinal(fromFileBuffer);
+			        byte[] encrypted = aesCipher.doFinal(fromFileBuffer);
 			        int encryptedNumBytes = encrypted.length;
 					
 					toServer.writeInt(1);

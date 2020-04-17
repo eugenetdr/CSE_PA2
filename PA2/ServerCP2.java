@@ -4,10 +4,12 @@ import java.io.DataOutputStream;
 import java.io.FileOutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.security.PrivateKey;
-import javax.crypto.Cipher;
+import java.security.*;
+import javax.crypto.*;
+import java.util.Base64;
+import javax.crypto.spec.SecretKeySpec;
 
-public class ServerCP1 {
+public class ServerCP2 {
 
 	public static void main(String[] args) {
 
@@ -22,16 +24,18 @@ public class ServerCP1 {
 		FileOutputStream fileOutputStream = null;
 		BufferedOutputStream bufferedFileOutputStream = null;
 
+
+
 		try {
 			welcomeSocket = new ServerSocket(port);
 			connectionSocket = welcomeSocket.accept();
 			fromClient = new DataInputStream(connectionSocket.getInputStream());
 			toClient = new DataOutputStream(connectionSocket.getOutputStream());
+    		SecretKey aesKey = KeyGenerator.getInstance("AES").generateKey();
 
 			while (!connectionSocket.isClosed()) {
 
 				int packetType = fromClient.readInt();
-				System.out.println(packetType);
 
 				// If the packet is for transferring the filename
 				if (packetType == 0) {
@@ -56,11 +60,10 @@ public class ServerCP1 {
 
 				    // Decrypt Line
 						
-					PrivateKey pteKey = AuthenticationProtocol.getPteKey("../private_key.der");
-				    Cipher rsaCipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
-			        rsaCipher.init(Cipher.DECRYPT_MODE, pteKey);
+				    Cipher aesCipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
+			        aesCipher.init(Cipher.DECRYPT_MODE, aesKey);
 			        
-			        byte[] decrypted = rsaCipher.doFinal(block);
+			        byte[] decrypted = aesCipher.doFinal(block);
 
 				    if (decrypted.length > 0)
 						bufferedFileOutputStream.write(decrypted, 0, decrypted.length);
@@ -74,6 +77,20 @@ public class ServerCP1 {
 						toClient.close();
 						connectionSocket.close();
 					}
+				} else if (packetType == 2) {
+					int keyBytes = fromClient.readInt();
+					byte [] encryptedKey = new byte[keyBytes];
+					fromClient.readFully(encryptedKey, 0, keyBytes);
+
+				    // Decrypt Key
+
+						
+					PrivateKey pteKey = AuthenticationProtocol.getPteKey("../private_key.der");
+				    Cipher rsaCipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+			        rsaCipher.init(Cipher.DECRYPT_MODE, pteKey);
+
+
+				    aesKey = new SecretKeySpec ( rsaCipher.doFinal(encryptedKey), "AES" );
 				}
 
 			}

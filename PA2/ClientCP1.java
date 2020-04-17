@@ -88,6 +88,9 @@ public class ClientCP1 {
 					toServer.flush();
 				}
 	        }
+	        System.out.println("Closing connection...");
+			long timeTaken = System.nanoTime() - timeStarted;
+			System.out.println("Program took: " + timeTaken/1000000.0 + "ms to run");
 	    } catch (Exception e ){
 	    	e.printStackTrace();
 	    }

@@ -31,7 +31,6 @@ public class ServerCP1 {
 			while (!connectionSocket.isClosed()) {
 
 				int packetType = fromClient.readInt();
-				System.out.println(packetType);
 
 				// If the packet is for transferring the filename
 				if (packetType == 0) {
@@ -66,14 +65,18 @@ public class ServerCP1 {
 						bufferedFileOutputStream.write(decrypted, 0, decrypted.length);
 
 					if (decrypted.length < 117) {
-						System.out.println("Closing connection...");
+
 
 						if (bufferedFileOutputStream != null) bufferedFileOutputStream.close();
 						if (bufferedFileOutputStream != null) fileOutputStream.close();
-						fromClient.close();
-						toClient.close();
-						connectionSocket.close();
 					}
+				} else if (packetType == 2) {
+					continue;
+				} else if (packetType == 3) {
+					System.out.println("Closing connection...");
+					fromClient.close();
+					toClient.close();
+					connectionSocket.close();
 				}
 
 			}

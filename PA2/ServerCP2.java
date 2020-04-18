@@ -69,13 +69,9 @@ public class ServerCP2 {
 						bufferedFileOutputStream.write(decrypted, 0, decrypted.length);
 
 					if (decrypted.length < 117) {
-						System.out.println("Closing connection...");
 
 						if (bufferedFileOutputStream != null) bufferedFileOutputStream.close();
 						if (bufferedFileOutputStream != null) fileOutputStream.close();
-						fromClient.close();
-						toClient.close();
-						connectionSocket.close();
 					}
 				} else if (packetType == 2) {
 					int keyBytes = fromClient.readInt();
@@ -91,6 +87,13 @@ public class ServerCP2 {
 
 
 				    aesKey = new SecretKeySpec ( rsaCipher.doFinal(encryptedKey), "AES" );
+				} else if (packetType == 3) {
+					continue;
+				} else if (packetType == 4) {
+					System.out.println("Closing connection...");
+					fromClient.close();
+					toClient.close();
+					connectionSocket.close();
 				}
 
 			}

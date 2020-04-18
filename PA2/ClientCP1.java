@@ -88,9 +88,13 @@ public class ClientCP1 {
 					toServer.flush();
 				}
 	        }
-	        System.out.println("Closing connection...");
+
 			long timeTaken = System.nanoTime() - timeStarted;
 			System.out.println("Program took: " + timeTaken/1000000.0 + "ms to run");
+
+
+	        bufferedFileInputStream.close();
+	        fileInputStream.close();
 	    } catch (Exception e ){
 	    	e.printStackTrace();
 	    }
@@ -138,8 +142,17 @@ public class ClientCP1 {
 		//:D //EXIT -program took how long to run, method used was aes1
 		else if (line.compareTo("EXIT") == 0){
 			//kill
-			System.out.println("Exiting now");
-			System.exit(0);
+			try {
+				toServer.writeInt(3);
+		        System.out.println("Closing connection...");
+				System.out.println("Exiting now");
+				System.exit(0);
+			} catch (Exception e) {
+				System.out.println("Exception occurred");
+				System.out.println("Exiting now");
+				System.exit(0);
+
+			}
 		}
 		//UPLD (filename)
 		else if (words[0].compareTo("UPLD") == 0){
@@ -201,13 +214,13 @@ public class ClientCP1 {
 
 			shellLoop();
 
-	        bufferedFileInputStream.close();
-	        fileInputStream.close();
+
+			System.out.println("Closing connection...");
+
 	    } catch (Exception e){
 	    	e.printStackTrace();
 	    }
 
-		System.out.println("Closing connection...");
 
 		long timeTaken = System.nanoTime() - timeStarted;
 		System.out.println("Program took: " + timeTaken/1000000.0 + "ms to run");

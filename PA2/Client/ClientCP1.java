@@ -2,14 +2,17 @@ import java.io.BufferedInputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.FileInputStream;
-import java.net.Socket;
 import javax.crypto.Cipher;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.net.Socket;
+import java.util.Arrays;
 import java.security.*;
+import javax.crypto.*;
 import java.lang.*; 
 import java.io.*; 
 import java.util.*;
+
 
 public class ClientCP1 {
 
@@ -23,32 +26,6 @@ public class ClientCP1 {
 	public static long timeStarted = System.nanoTime();
 
 	public static int numBytes = 0;
-
-	public static void shellListDir(){
-		ProcessBuilder processBuilder = new ProcessBuilder();
-		processBuilder.command("ls");
-		try {
-			Process p = processBuilder.start(); 
-			StringBuilder output = new StringBuilder(); 
-	     
-	        BufferedReader reader = new BufferedReader(new InputStreamReader(p.getInputStream()));
-	        String line;
-			while ((line = reader.readLine()) != null) {
-			 	output.append(line + "\n");
-			}
-	        int exitVal = p.waitFor();
-	       	if (exitVal == 0) {
-				System.out.println("Success!");
-				System.out.println(output);
-		    } else {
-			    //abnormal...
-			    System.out.println("Error has occurred while listing directory, please try again");
-		    }
-		} catch (Exception e){
-			System.out.println("Error found in DeleteFile");
-			e.printStackTrace();
-		}
-	}
 
 	public static void shellUploadFile(String filename){
 		System.out.println("Sending file...");
@@ -66,7 +43,7 @@ public class ClientCP1 {
 	        byte [] fromFileBuffer = new byte[117];
 	        
 	        // Set up encryption
-	        PublicKey key = AuthenticationProtocol.getPubKey("../cacse.crt", "../server.crt");
+	        PublicKey key = AuthenticationProtocol.getPubKey("../../cacse.crt", "../../server.crt");
 	        if (key != null) {
 	        	Cipher rsaCipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
 		        rsaCipher.init(Cipher.ENCRYPT_MODE, key);
@@ -99,44 +76,34 @@ public class ClientCP1 {
 	    	e.printStackTrace();
 	    }
 	}
-	// public static void shellDownloadFile(){ //Stupid to have download :D wake up your idea pls.
-
-	// }
-	public static void shellDeleteFile(String filename){
-		ProcessBuilder processBuilder = new ProcessBuilder();
-		processBuilder.command("rm",filename);
-		try {
-			Process p = processBuilder.start(); 
-			StringBuilder output = new StringBuilder(); 
-	        BufferedReader reader = new BufferedReader(new InputStreamReader(p.getInputStream()));
-	        String line;
-			while ((line = reader.readLine()) != null) {
-			 	output.append(line + "\n");
-			}
-	        int exitVal = p.waitFor();
-	       	if (exitVal == 0) {
-				System.out.println("Success!");
-				System.out.println(output);
-		    } else {
-			    //abnormal...
-			    System.out.println("File cannot be deleted, please try again");
-		    }
-		} catch (Exception e){
-			System.out.println("Error found in DeleteFile");
-			e.printStackTrace();
-		}
-	}
 
 	public static int shellExecuteInput(String line){
 		String[] words = line.split("\\s");
 		if (words.length > 2){
-			System.out.println("Invalid command, please try: EXIT, UPLD <FILENAME>, DWNLD <FILENAME>, DEL <FILENAME> or LISTDIR");
+			System.out.println("Invalid command, please try: EXIT, UPLD <FILENAME>, DEL <FILENAME> or LISTDIR");
 			return 1;
 		}
 		//:D //LISTDIR 
 		else if (line.compareTo("LISTDIR") == 0){
 			System.out.println("Listing directory");
-			shellListDir();
+			try {
+				toServer.writeInt(2);
+				for (boolean fileEnded = false; !fileEnded;) {
+					int recvLen = fromServer.readInt();
+					fileEnded = recvLen == -1;
+					
+					if (!fileEnded) {
+						byte [] recv = new byte[recvLen];
+						fromServer.readFully(recv, 0, recvLen);
+						String recvLine = new String(recv);
+						System.out.println(recvLine);
+					}
+				}
+			} catch (Exception e) {
+				System.out.println("Exception occurred");
+				System.out.println("Exiting now");
+				System.exit(0);
+			}
 			return 1;
 		}
 		//:D //EXIT -program took how long to run, method used was aes1
@@ -151,7 +118,6 @@ public class ClientCP1 {
 				System.out.println("Exception occurred");
 				System.out.println("Exiting now");
 				System.exit(0);
-
 			}
 		}
 		//UPLD (filename)
@@ -160,21 +126,33 @@ public class ClientCP1 {
 			shellUploadFile(words[1]);
 			return 1; 
 		}
-		//DWNLD (filename)
-		else if (words[0].compareTo("DWNLD") == 0){
-			System.out.println("Downloading mode");
-			// shellDownloadFile();
-			return 1;
-		}
 		//:D DEL (filename) DEL non-existant file
 		else if (words[0].compareTo("DEL") == 0){
 			System.out.println("Deleting mode");
-			shellDeleteFile(words[1]);
+			try {
+				toServer.writeInt(4);
+				toServer.writeInt(words[1].getBytes().length);
+				toServer.write(words[1].getBytes());
+				int status = fromServer.readInt();
+				if (status == 4) {
+					System.out.println("Delete Successful!");
+				}
+				else if (status == -1) {
+					System.out.println("Delete Unsuccessful!");
+				}
+				else {
+					System.out.println("File does not Exist!");
+				}
+			} catch (Exception e) {
+				System.out.println("Exception occurred");
+				System.out.println("Exiting now");
+				System.exit(0);
+			}
 			return 1; 
 		}
 		else {
 			//invalid commands
-			System.out.println("Invalid command, please try: EXIT, UPLD <FILENAME>, DWNLD <FILENAME>, DEL <FILENAME> or LISTDIR");
+			System.out.println("Invalid command, please try: EXIT, UPLD <FILENAME>, DEL <FILENAME> or LISTDIR");
 			return 1; 
 		}
 		return 1;

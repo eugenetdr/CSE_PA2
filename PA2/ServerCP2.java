@@ -212,7 +212,6 @@ public class ServerCP2 {
 						try {
 							toClient.writeInt(5);
 							shellDownloadFile(filename, aesKey);
-							toClient.writeInt(-1);
 						} catch (Exception e) {
 							toClient.writeInt(-1);
 						}

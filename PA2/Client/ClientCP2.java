@@ -186,41 +186,44 @@ public class ClientCP2 {
 				int status = fromServer.readInt();
 				if (status == 5) {
 					System.out.println("Downloading File...");
+
+				    // Receive packet from Server
+			    	fileOutputStream = new FileOutputStream("dwnld_"+words[1]);
+					bufferedFileOutputStream = new BufferedOutputStream(fileOutputStream);
+
+
+			    	for (boolean fileReceived = false; !fileReceived;) {
+						int numBytes = fromServer.readInt();
+						fileReceived = numBytes == -1;
+
+						if (!fileReceived) {
+							byte [] block = new byte[numBytes];
+							fromServer.readFully(block, 0, numBytes);
+
+						    // Decrypt Line
+								
+						    Cipher aesCipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
+					        aesCipher.init(Cipher.DECRYPT_MODE, aesKey);
+					        
+					        byte[] decrypted = aesCipher.doFinal(block);
+
+						    if (decrypted.length > 0)
+								bufferedFileOutputStream.write(decrypted, 0, decrypted.length);
+
+							if (decrypted.length < 117) {
+
+								if (bufferedFileOutputStream != null) bufferedFileOutputStream.close();
+								if (bufferedFileOutputStream != null) fileOutputStream.close();
+							} 
+						}
+					}
 				}
 				else if (status == -2) {
 					System.out.println("File does not Exist!");
+				} else {
+					System.out.println(status);
 				}
 
-			    // Receive packet from Server
-		    	fileOutputStream = new FileOutputStream("dwnld_"+words[1]);
-				bufferedFileOutputStream = new BufferedOutputStream(fileOutputStream);
-
-
-		    	for (boolean fileReceived = false; !fileReceived;) {
-					int numBytes = fromServer.readInt();
-					fileReceived = numBytes == -1;
-					
-					if (!fileReceived) {
-						byte [] block = new byte[numBytes];
-						fromServer.readFully(block, 0, numBytes);
-
-					    // Decrypt Line
-							
-					    Cipher aesCipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
-				        aesCipher.init(Cipher.DECRYPT_MODE, aesKey);
-				        
-				        byte[] decrypted = aesCipher.doFinal(block);
-
-					    if (decrypted.length > 0)
-							bufferedFileOutputStream.write(decrypted, 0, decrypted.length);
-
-						if (decrypted.length < 117) {
-
-							if (bufferedFileOutputStream != null) bufferedFileOutputStream.close();
-							if (bufferedFileOutputStream != null) fileOutputStream.close();
-						} 
-					}
-				}
 
 			} catch (Exception e) {
 				System.out.println("Exception occurred");
